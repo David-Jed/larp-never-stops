@@ -1,0 +1,50 @@
+name: Daily random commits
+
+on:
+  schedule:
+    # 8:17 PM UTC is roughly 4:17 PM Toronto during daylight saving time
+    - cron: "17 20 * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  make-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
+      - name: Create random commits
+        shell: bash
+        run: |
+          set -e
+
+          COMMIT_COUNT=$((RANDOM % 6 + 2))
+
+          mkdir -p activity
+          touch activity/daily-log.txt
+
+          echo "Creating $COMMIT_COUNT commits"
+
+          for ((i = 1; i <= COMMIT_COUNT; i++)); do
+            echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | run=$GITHUB_RUN_ID | entry=$i | random=$RANDOM" >> activity/daily-log.txt
+
+            git add activity/daily-log.txt
+            git commit -m "Daily activity $i of $COMMIT_COUNT"
+
+            sleep 2
+          done
+
+      - name: Push commits
+        run: git push
